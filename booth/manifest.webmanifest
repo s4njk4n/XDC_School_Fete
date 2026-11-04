@@ -3,6 +3,7 @@
   "name": "Ticket Booth",
   "short_name": "Ticket Booth",
   "description": "Sell fete tickets",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

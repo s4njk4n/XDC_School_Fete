@@ -34,7 +34,7 @@
     return F.history.list().filter((e) => range === 'all' || F.isToday(e.t));
   }
   function row(e) {
-    const label = e.type === 'sale' ? 'Sold · ' + (e.method === 'card' ? 'card' : 'cash') : e.type === 'buyback' ? 'Bought back' : e.type === 'topup' ? 'Phone top-up' : e.type === 'return' ? 'Returned to organiser' : e.type;
+    const label = e.type === 'sale' ? 'Sold · ' + (e.method === 'card' ? 'card' : 'cash') + (e.pending ? ' · still going through' : '') : e.type === 'buyback' ? 'Bought back' : e.type === 'topup' ? 'Phone top-up' : e.type === 'return' ? 'Returned to organiser' : e.type;
     const ico = { sale: e.method === 'card' ? '💳' : '💵', buyback: '↩️', topup: '⚡', return: '📦' }[e.type] || '•';
     return '<li><div class="ico">' + ico + '</div><div class="grow"><b>' + esc(label) + '</b><span>' + F.timeStr(e.t) + (e.dollars ? ' · ' + F.dollars(e.dollars) : '') + '</span></div>' +
       '<div class="amt">' + (e.amount ? F.fmt(e.amount) : '') + '</div></li>';
@@ -100,7 +100,17 @@
       b.close();
       await F.splash('Done!', F.tix(n) + ' sent to the customer');
       home();
-    } catch (e) { b.close(); await F.showError(e); refresh(); }
+    } catch (e) {
+      b.close();
+      if (e.code === 'TIMEOUT' && e.hash) {
+        // Almost certainly still going through: count the sale, and confirm it in the background.
+        const id = Date.now();
+        F.history.add({ id, type: 'sale', amount: n, dollars: dollarsPaid, method: r.value, to: c.address, pending: e.hash });
+        confirmLater(id, e.hash);
+        await F.alertSheet('Still going through', 'The network is slow. The customer\'s ' + F.tix(n) + ' should appear on their phone within a minute or two. Please don\'t sell them again — this sale is already counted. If they still haven\'t arrived in 5 minutes, ask the organiser.');
+        home();
+      } else { await F.showError(e); refresh(); }
+    }
   }
 
   $('#otherBtn').onclick = async () => {
@@ -148,6 +158,23 @@
     } catch (e) { b.close(); await F.showError(e); }
   };
 
+  /** A sale whose confirmation timed out: keep checking; un-count it if it actually failed. */
+  function confirmLater(id, hash) {
+    F.waitTx(hash, 10 * 60000).then(() => setPending(id, null)).catch((err) => {
+      if (err.code === 'TIMEOUT') return;
+      const l = F.history.list().filter((x) => x.id !== id);
+      F.fstore.set('history', l);
+      render();
+      F.alertSheet('A sale didn\'t go through', 'An earlier sale that was "still going through" failed, so it has been removed from the totals. The customer didn\'t receive those tickets — if they paid, please sell to them again.');
+    });
+  }
+  function setPending(id, v) {
+    const l = F.history.list();
+    const e = l.find((x) => x.id === id);
+    if (e) { e.pending = v; F.fstore.set('history', l); render(); }
+  }
+  F.history.list().filter((x) => x.pending).forEach((x) => confirmLater(x.id, x.pending));
+
   // ---------------------------------------------------------------- buy back (refund cash for tickets)
   $('#buybackBtn').onclick = async () => {
     const r = await F.sheet({
@@ -166,15 +193,28 @@
     $('#reqSub').textContent = 'Scan with your phone\'s camera, or in Fete Tickets tap "Pay at a stall".';
     $('#reqQr').innerHTML = F.qrSvg(F.Codes.pay(F.myAddress(), amount, 'Ticket booth · buy back'));
     F.showView('request');
-    request = F.watchPayment(amount, block, start, async () => {
-      request = null;
-      const d = n * cents() / 100;
+    const d = n * cents() / 100;
+    const w = F.watchPayment(amount, block, start, async () => {
       F.history.add({ type: 'buyback', amount: n, dollars: d });
-      await F.splash('Received ' + F.tix(n), 'Give the customer ' + F.dollars(d));
-      home();
+      if (request === w) {
+        request = null;
+        await F.splash('Received ' + F.tix(n), 'Give the customer ' + F.dollars(d));
+        home();
+      } else {
+        // Cancelled, but the customer paid anyway.
+        render();
+        await F.splash('Late buy-back received', F.tix(n) + ' arrived after you cancelled. Give the customer ' + F.dollars(d) + '.');
+      }
     });
+    request = w;
   };
-  $('#reqCancel').onclick = () => { if (request) request.stop(); request = null; home(); };
+  $('#reqCancel').onclick = () => {
+    const w = request;
+    request = null;
+    // Keep listening for a few minutes in case the customer already paid.
+    if (w) setTimeout(() => w.stop(), 3 * 60000);
+    home();
+  };
 
   // ---------------------------------------------------------------- totals
   function renderTotals(range) {
@@ -234,7 +274,7 @@
   F.watchBalance((b, prev) => {
     float = b; render();
     if (prev !== null && b > prev && document.body.dataset.current === 'mycode') { F.splash('Tickets loaded', 'This booth now has ' + F.tix(b) + ' to sell'); home(); }
-  }, 5000);
+  }, () => (document.body.dataset.current === 'mycode' ? 3000 : 12000));
 
   if (!F.store.get('booth.name')) F.store.set('booth.name', 'Ticket booth');
   renderQuick();

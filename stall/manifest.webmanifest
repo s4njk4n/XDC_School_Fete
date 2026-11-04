@@ -3,6 +3,7 @@
   "name": "Fete Stall",
   "short_name": "Fete Stall",
   "description": "Take tickets at your stall",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

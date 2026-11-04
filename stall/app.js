@@ -60,6 +60,12 @@
     $('#backupNag').hidden = !!F.store.get('stall.backedUp');
   }
   function sell() { request && request.stop(); request = null; renderSell(); F.showView('sell'); }
+  // After "Cancel sale", keep listening for a few minutes in case the customer had already paid.
+  function cancelRequest() {
+    const w = request;
+    request = null;
+    if (w) setTimeout(() => w.stop(), 3 * 60000);
+  }
 
   $('#chargeBtn').onclick = () => charge(cartTotal(), cartLabel());
   $('#clearBtn').onclick = () => { cart = {}; renderSell(); };
@@ -86,17 +92,22 @@
     $('#reqItems').textContent = label;
     $('#reqQr').innerHTML = F.qrSvg(F.Codes.pay(F.myAddress(), amount, stallName() + (label ? ' · ' + label : '')));
     F.showView('request');
-    request = F.watchPayment(amount, block, start, async (info) => {
-      request = null;
+    const w = F.watchPayment(amount, block, start, async (info) => {
       F.history.add({ type: 'sale', amount: n, label, from: info.from });
-      cart = {};
-      await F.splash('PAID', F.tix(n) + (label ? ' · ' + label : ''), true, 2200);
-      sell();
+      if (request === w) {
+        request = null;
+        cart = {};
+        await F.splash('PAID', F.tix(n) + (label ? ' · ' + label : ''), true, 2200);
+        sell();
+      } else {
+        await F.splash('Late payment received', F.tix(n) + (label ? ' · ' + label : '') + ' — paid after the sale was cancelled.', true, 4000);
+      }
     });
+    request = w;
   }
   $('#reqCancel').onclick = async () => {
-    const ok = await F.confirmSheet('Cancel this sale?', 'Only cancel if the customer <b>hasn\'t</b> paid yet.', 'Cancel sale', 'Keep waiting');
-    if (ok) sell();
+    const ok = await F.confirmSheet('Cancel this sale?', 'Only cancel if the customer <b>hasn\'t</b> paid yet. (If they pay in the next few minutes anyway, you\'ll still be told.)', 'Cancel sale', 'Keep waiting');
+    if (ok) { cancelRequest(); sell(); }
   };
 
   // ---------------------------------------------------------------- items editor
@@ -213,7 +224,7 @@
       const joined = c > 0n || t > 0n || F.history.list().length > 0;
       if (joined) F.fstore.set('joined', 1);
       $('#joinNote').hidden = joined || !!F.fstore.get('joined');
-      if (!joined && !F.fstore.get('joined')) setTimeout(checkJoined, 5000);
+      if (!joined && !F.fstore.get('joined')) setTimeout(checkJoined, 8000);
     } catch (e) { setTimeout(checkJoined, 8000); }
   })();
 

@@ -3,6 +3,7 @@
   "name": "Fete Tickets",
   "short_name": "Tickets",
   "description": "Your fete tickets on your phone",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

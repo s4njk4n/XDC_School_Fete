@@ -3,6 +3,7 @@
   "name": "Fete Organiser",
   "short_name": "Organiser",
   "description": "Run the fete ticket system",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

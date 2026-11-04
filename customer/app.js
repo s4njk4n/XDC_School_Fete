@@ -86,7 +86,7 @@
       renderHistory();
       F.splash('+' + F.tix(got), 'You now have ' + F.tix(b)).then(() => { if (onCode) home(); });
     }
-  }, 3000);
+  }, () => (document.body.dataset.current === 'mycode' ? 3000 : 12000));
 
   // ---------------------------------------------------------------- actions
   $('#getBtn').onclick = () => {
@@ -145,6 +145,13 @@
     }
     $('#payAfter').textContent = balance !== null && balance >= c.amount ? 'You\'ll have ' + F.tix(balance - c.amount) + ' left' : '';
     F.showView('pay');
+    // Is this a real stall/booth of this fete? (Guards against prank or fake QR codes.)
+    F.isTeamMember(c.address).then((ok) => {
+      if (ok !== false || pending !== c || document.body.dataset.current !== 'pay') return;
+      const w = $('#payWarn');
+      w.innerHTML = '<b>Check before paying.</b> This code isn\'t from one of the fete\'s registered stalls. Only pay if you\'re sure it\'s a real fete stall — if unsure, ask a fete helper.' + (w.hidden ? '' : '<br><br>' + w.innerHTML);
+      w.hidden = false;
+    });
   }
 
   $('#payGo').onclick = async () => {
@@ -166,7 +173,15 @@
       home();
     } catch (e) {
       b.close();
-      await F.showError(e);
+      if (e.code === 'TIMEOUT') {
+        const paid = F.fstore.get('paid', []);
+        paid.unshift(c.address.toLowerCase() + ':' + c.amount);
+        F.fstore.set('paid', paid.slice(0, 50));
+        const parts = (c.label || '').split(' · ');
+        F.history.add({ type: 'pay', title: parts[0] || 'Stall payment', sub: 'going through', amount: Number(F.toNum(c.amount).toFixed(2)) });
+        await F.alertSheet('Payment going through', 'The network is slow right now. Your payment has been sent and should reach the stall within a minute — their phone will show PAID. Please don\'t pay again.');
+        home();
+      } else await F.showError(e);
     }
   };
 

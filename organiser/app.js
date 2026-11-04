@@ -24,7 +24,8 @@
 
   // Team = booths and stalls, recorded on the network by addHelper() so any phone can rebuild it.
   let teamList = F.feteAddress() ? F.cachedHelpers() : [];
-  const team = () => teamList;
+  const team = () => teamList.filter((m) => !m.removed);     // current team
+  const everyone = () => teamList;                           // incl. removed (for totals)
 
   // ---------------------------------------------------------------- running credit
   let creditTimer = null;
@@ -102,7 +103,14 @@
       b.close();
       F.$$('[data-fete-name]').forEach((e) => (e.textContent = name));
       showPublished();
-    } catch (e) { b.close(); F.showError(e); }
+    } catch (e) {
+      b.close();
+      if (e.code === 'TIMEOUT') {
+        await F.alertSheet('Still creating your tickets', 'The network is slow. Please don\'t tap Create again — reopen this app in a minute or two and it will carry on from here automatically.');
+        const again = await F.recoverPendingFete();
+        if (again) { teamList = []; showPublished(); }
+      } else F.showError(e);
+    }
   };
 
   function showPublished() {
@@ -194,7 +202,11 @@
     }).join('') : '<li class="empty">No booths or stalls yet. Tap <b>Invite helpers</b> to send them their link, then scan each helper\'s code.</li>';
     $$('#team [data-m]').forEach((li) => (li.onclick = () => memberActions(Number(li.dataset.m))));
   }
-  async function refreshTeam() {
+  let lastTeamRefresh = 0;
+  async function refreshTeam(force) {
+    // Many stalls = many balance look-ups; don't repeat them every time the dashboard opens.
+    if (!force && Date.now() - lastTeamRefresh < 15000) return renderTeam();
+    lastTeamRefresh = Date.now();
     try { teamList = await F.helperList(); } catch (e) { }
     await Promise.all(team().map(async (m) => {
       try {
@@ -204,7 +216,7 @@
     }));
     renderTeam();
   }
-  $('#refreshTeam').onclick = () => { refreshDash(); F.toast('Updated'); };
+  $('#refreshTeam').onclick = () => { lastTeamRefresh = 0; refreshDash(); F.toast('Updated'); };
   $$('[data-dash]').forEach((b) => (b.onclick = dash));
   $('#backupNow').onclick = async () => { if (await F.backupFlow(false)) setFlag('backup'); dash(); };
 
@@ -238,6 +250,7 @@
       b.close();
       await F.splash('Added ' + name, [tix ? F.tix(tix) : '', cred ? cred + ' XDC credit' : ''].filter(Boolean).join(' + '));
     } catch (e) { b.close(); await F.showError(e); }
+    lastTeamRefresh = 0;
     dash();
   };
 
@@ -293,6 +306,7 @@
       const b = F.busy('Saving…');
       try { await F.addHelper(m.address, 0n, 0n, kind, name); b.close(); F.toast('Saved', 'ok'); }
       catch (e) { b.close(); await F.showError(e); }
+      lastTeamRefresh = 0;
       dash();
     }
   }
@@ -351,7 +365,7 @@
 
   async function buildReport(transfers) {
     const org = F.state.info.organiser.toLowerCase();
-    const t = team();
+    const t = everyone(); // removed booths/stalls still count towards the totals
     const byAddr = {};
     t.forEach((m) => (byAddr[m.address.toLowerCase()] = Object.assign({ given: 0n, sold: 0n, back: 0n, taken: 0n, refunded: 0n, returned: 0n, holding: 0n }, m)));
     const ZERO = '0x0000000000000000000000000000000000000000';
@@ -394,12 +408,12 @@
       (prizes ? ' Given directly by you: ' + F.fmt(prizes) + '.' : '') + '</p></div>';
 
     html += '<div class="card"><h2>Ticket booths</h2>' + (booths.length ? '<ul class="list">' + booths.map((m) =>
-      '<li><div class="grow"><b>' + esc(m.name) + '</b><span style="white-space:normal">Loaded ' + F.fmt(m.given) + ' · sold ' + F.fmt(m.sold) + ' · bought back ' + F.fmt(m.back) + ' · holding ' + F.fmt(m.holding) + (m.returned ? ' · returned ' + F.fmt(m.returned) : '') + '</span></div>' +
+      '<li><div class="grow"><b>' + esc(m.name) + (m.removed ? ' (removed)' : '') + '</b><span style="white-space:normal">Loaded ' + F.fmt(m.given) + ' · sold ' + F.fmt(m.sold) + ' · bought back ' + F.fmt(m.back) + ' · holding ' + F.fmt(m.holding) + (m.returned ? ' · returned ' + F.fmt(m.returned) : '') + '</span></div>' +
       '<div class="amt">' + M(m.sold - m.back) + '<div class="small muted" style="font-weight:400">cash + card</div></div></li>').join('') + '</ul>' : '<p class="empty">No booths on your team.</p>') +
       '<p class="small muted">Each booth\'s cash + card should match the amount shown. The booth app also splits cash and card.</p></div>';
 
     html += '<div class="card"><h2>Stalls</h2>' + (stalls.length ? '<ul class="list">' + stalls.sort((a, b) => (b.taken > a.taken ? 1 : -1)).map((m) =>
-      '<li><div class="grow"><b>' + esc(m.name) + '</b><span style="white-space:normal">Took ' + F.fmt(m.taken) + (m.refunded ? ' · refunded ' + F.fmt(m.refunded) : '') + ' · holding ' + F.fmt(m.holding) + (m.returned ? ' · handed in ' + F.fmt(m.returned) : '') + '</span></div>' +
+      '<li><div class="grow"><b>' + esc(m.name) + (m.removed ? ' (removed)' : '') + '</b><span style="white-space:normal">Took ' + F.fmt(m.taken) + (m.refunded ? ' · refunded ' + F.fmt(m.refunded) : '') + ' · holding ' + F.fmt(m.holding) + (m.returned ? ' · handed in ' + F.fmt(m.returned) : '') + '</span></div>' +
       '<div class="amt">' + M(m.taken - m.refunded) + '</div></li>').join('') + '</ul>' : '<p class="empty">No stalls on your team.</p>') + '</div>';
     $('#repBody').innerHTML = html;
 
@@ -467,9 +481,10 @@
     if (!r.value) return;
     const b = F.busy('Saving…');
     try {
-      const tx = await F.state.token.setSettings($('#sName', r.el).value.trim(), Math.round(Number($('#sPrice', r.el).value) * 100),
-        { gasPrice: await F.gasPrice(), type: 0, gasLimit: 200000n, chainId: F.state.chainId });
-      await F.waitTx(tx.hash);
+      await F.sendAndWait({
+        to: F.feteAddress(), gasLimit: 200000n,
+        data: F.iface.encodeFunctionData('setSettings', [$('#sName', r.el).value.trim(), Math.round(Number($('#sPrice', r.el).value) * 100)])
+      });
       await F.loadInfo(true);
       b.close();
       F.toast('Saved', 'ok');
@@ -489,7 +504,12 @@
   });
 
   // ---------------------------------------------------------------- start
-  if (!F.feteAddress()) return showSetup();
+  if (!F.feteAddress()) {
+    // Was creating tickets interrupted (app closed / slow network)? Pick it up again.
+    const recovered = await F.recoverPendingFete();
+    if (recovered) { teamList = []; return showPublished(); }
+    return showSetup();
+  }
   // Restored from a backup that already contained this fete? Then the backup is clearly saved.
   if (F.store.get('organiser.restoredFete') === F.feteAddress().toLowerCase() && !flags().backup) setFlag('backup');
   if (F.state.info && !F.sameAddr(F.state.info.organiser, me())) {

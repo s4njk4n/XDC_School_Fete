@@ -1,6 +1,6 @@
 /* Fete Tickets — offline helper. Keeps the apps opening even on patchy fete Wi-Fi.
    Network first (so updates arrive straight away), falling back to the saved copy. */
-const CACHE = 'fete-tickets-v3';
+const CACHE = 'fete-tickets-v4';
 const CORE = [
   './', './index.html', './config.js',
   './shared/app.css', './shared/core.js', './shared/contract.js',
@@ -20,6 +20,9 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  // One saved copy per page (ignore ?fete=… etc.), so the cache doesn't grow with every link.
+  const url = new URL(req.url);
+  const key = url.origin + url.pathname;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
@@ -27,10 +30,10 @@ self.addEventListener('fetch', (e) => {
       const timer = setTimeout(() => ctl.abort(), 5000);
       const res = await fetch(req, { signal: ctl.signal });
       clearTimeout(timer);
-      if (res.ok) cache.put(req, res.clone());
+      if (res.ok && res.type === 'basic') cache.put(key, res.clone());
       return res;
     } catch (err) {
-      const hit = await cache.match(req, { ignoreSearch: true });
+      const hit = (await cache.match(key)) || (await cache.match(req, { ignoreSearch: true }));
       if (hit) return hit;
       throw err;
     }
