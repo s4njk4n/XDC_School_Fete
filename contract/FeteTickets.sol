@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 /// @title  FeteTickets
 /// @notice A closed-loop "ticket" token for a school fete. Tickets have no
 ///         monetary value outside the fete; they simply replace paper tickets.
-///         Standard ERC-20 plus:
+///         Standard XRC-20 (XDC Network's ERC-20-compatible token standard) plus:
 ///           - fete name + ticket price (in cents) stored on-chain so every app
 ///             can read the settings from one address
 ///           - give(): transfer tickets AND forward a little XDC "running credit"
@@ -52,7 +52,7 @@ contract FeteTickets {
         emit SettingsChanged(feteName, cents);
     }
 
-    // ---------------------------------------------------------------- ERC-20
+    // ---------------------------------------------------------------- XRC-20
 
     function transfer(address to, uint256 value) external returns (bool) {
         _transfer(msg.sender, to, value);

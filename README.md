@@ -49,7 +49,7 @@ Go to **https://xdcoutpost.xyz/XDC_School_Fete/** and tap **I'm organising a fet
 
 ## How it works (technical)
 
-- **Tickets** are a minimal ERC-20 token (`contract/FeteTickets.sol`, symbol `TIX`, 18 decimals) deployed from the Organiser app. It also stores the fete name, ticket price in cents, organiser address and creation block.
+- **Tickets** are a minimal XRC-20 token (XDC Network's ERC-20-compatible token standard) (`contract/FeteTickets.sol`, symbol `TIX`, 18 decimals) deployed from the Organiser app. It also stores the fete name, ticket price in cents, organiser address and creation block.
 - **`give(to, amount)` is payable.** It moves tickets and forwards the attached XDC "running credit" (gas) in one transaction. Booths top up each customer phone that has less than `0.01` XDC with `0.05` XDC. Customers never see the words gas or XDC.
 - **Stall payments:** the stall's QR asks for slightly *less* than the price, by a random amount under 0.000001 of a ticket. The stall then watches its `Transfer` logs for that exact value, and falls back to checking its balance if needed.
 - **Wallets** are created in each app and stored in `localStorage`, separately for each app, so one phone can hold several roles. The backup is a text message the person sends to their own number.
