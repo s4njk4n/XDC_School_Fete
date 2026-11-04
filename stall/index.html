@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fete Stall</title>
+<meta name="theme-color" content="#0f9d6b">
+<meta name="description" content="Take tickets at your stall">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/stall-192.png">
+<link rel="apple-touch-icon" href="../icons/stall-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fete Stall">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="../shared/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="title"><b id="stallName">Fete Stall</b><small data-fete-name>&nbsp;</small></div>
+  <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+</header>
+
+<main>
+  <!-- SELL -->
+  <section data-view="sell" hidden>
+    <div id="backupNag" class="notice warn" hidden>
+      <b>Save this stall's backup</b> — it keeps the tickets you've taken safe.
+      <button class="btn small" id="backupNow">Save it now</button>
+    </div>
+    <div id="joinNote" class="notice info" hidden>
+      <b>Last step:</b> show the organiser this stall's code so they can add you.
+      <button class="btn small" id="joinCode">Show my stall's code</button>
+    </div>
+    <div id="noItems" class="card center" hidden>
+      <h2>Add what you sell</h2>
+      <p class="muted">Add your items and prices once, then just tap them to charge customers.</p>
+      <button class="btn" id="addFirst">Add items</button>
+    </div>
+    <div class="grid3" id="items"></div>
+    <div style="height:14px"></div>
+
+    <div class="card" id="cartCard" hidden>
+      <ul class="list" id="cart"></ul>
+      <div class="row" style="align-items:center;margin-top:6px">
+        <b style="font-size:20px">Total</b>
+        <b style="font-size:26px;text-align:right;color:var(--brand-dark)" id="cartTotal">0</b>
+      </div>
+    </div>
+    <button class="btn huge" id="chargeBtn" disabled>Charge</button>
+    <div class="grid2">
+      <button class="btn secondary" id="customBtn"><span class="emoji">🔢</span> Type amount</button>
+      <button class="btn secondary" id="clearBtn">Clear</button>
+    </div>
+    <div class="grid3" style="margin-top:4px">
+      <button class="btn ghost small" id="todayBtn" style="width:100%">📊 Today</button>
+      <button class="btn ghost small" id="refundBtn" style="width:100%">↩️ Refund</button>
+      <button class="btn ghost small" id="menuBtn" style="width:100%">✏️ Items</button>
+    </div>
+  </section>
+
+  <!-- PAYMENT REQUEST -->
+  <section data-view="request" hidden>
+    <div class="center">
+      <div class="muted">Customer pays</div>
+      <div class="big-number" id="reqAmt">0</div>
+      <div class="unit" id="reqUnit">tickets</div>
+      <p class="muted small" id="reqItems" style="margin-top:6px"></p>
+      <div class="qr big" id="reqQr"></div>
+      <p><b>Customer:</b> scan this with your phone's camera, or in Fete Tickets tap <b>Pay at a stall</b>.</p>
+      <div class="pill" id="reqStatus"><span class="spinner sm"></span>&nbsp; Waiting for payment…</div>
+      <div style="height:16px"></div>
+      <button class="btn ghost" id="reqCancel">Cancel</button>
+    </div>
+  </section>
+
+  <!-- MENU EDITOR -->
+  <section data-view="menu" hidden>
+    <h1>Your items</h1>
+    <p class="muted">Customers never see this list — it just makes charging quick.</p>
+    <div class="card"><ul class="list" id="menuList"></ul></div>
+    <div class="card">
+      <h3>Add an item</h3>
+      <label class="field"><span>Item</span><input class="input" id="newName" placeholder="e.g. Sausage sizzle" maxlength="30"></label>
+      <label class="field"><span>Price in tickets</span><input class="input" id="newPrice" type="number" inputmode="decimal" min="0" step="0.5" placeholder="e.g. 3"></label>
+      <button class="btn" id="addItem">Add item</button>
+    </div>
+    <button class="btn secondary" data-sell>Done</button>
+  </section>
+
+  <!-- TODAY -->
+  <section data-view="today" hidden>
+    <h1>Today</h1>
+    <div class="card">
+      <div class="stat-grid">
+        <div class="stat"><b id="sTaken">0</b><span>tickets taken</span></div>
+        <div class="stat"><b id="sMoney">$0</b><span>worth</span></div>
+        <div class="stat"><b id="sCount">0</b><span>sales</span></div>
+        <div class="stat"><b id="sHeld">–</b><span>tickets on this phone</span></div>
+      </div>
+    </div>
+    <div class="card"><h3>Sales</h3><ul class="list" id="salesList"></ul></div>
+    <button class="btn secondary" id="handInBtn">End of day: hand tickets in to organiser</button>
+    <button class="btn ghost" id="myCodeBtn">Show this stall's code (for the organiser)</button>
+    <button class="btn ghost" data-sell>Back</button>
+  </section>
+
+  <section data-view="mycode" hidden>
+    <div class="center">
+      <h1>This stall's code</h1>
+      <p class="muted">The organiser scans this to add your stall and top up its running credit.</p>
+      <div class="qr big" id="myQr"></div>
+      <button class="btn secondary" data-sell>Back</button>
+    </div>
+  </section>
+</main>
+<script src="../config.js"></script>
+<script src="../shared/vendor/ethers.umd.min.js"></script>
+<script src="../shared/vendor/qrcode.js"></script>
+<script src="../shared/vendor/jsQR.js"></script>
+<script src="../shared/contract.js"></script>
+<script src="../shared/core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

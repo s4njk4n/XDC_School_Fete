@@ -1,0 +1,31 @@
+{
+  "id": "./?app=customer",
+  "name": "Fete Tickets",
+  "short_name": "Tickets",
+  "description": "Your fete tickets on your phone",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f5fc",
+  "theme_color": "#6d3df5",
+  "icons": [
+    {
+      "src": "../icons/customer-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../icons/customer-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../icons/customer-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

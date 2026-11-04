@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fete Organiser</title>
+<meta name="theme-color" content="#1f4fa8">
+<meta name="description" content="Run the fete ticket system">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/organiser-192.png">
+<link rel="apple-touch-icon" href="../icons/organiser-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Organiser">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="../shared/app.css">
+</head>
+<body>
+<header class="topbar no-print">
+  <div class="title"><b>Fete Organiser</b><small data-fete-name>Set up your fete</small></div>
+  <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+</header>
+
+<main>
+  <!-- SETUP (no fete yet) -->
+  <section data-view="setup" hidden>
+    <h1>Set up your fete</h1>
+    <div id="practiceOffer" class="notice info">
+      <b>First time?</b> Do a practice run with pretend credit — it costs nothing and your committee can try every step.
+      <button class="btn small" id="practiceGo">🧪 Start a practice fete</button>
+    </div>
+    <div id="practiceOn" class="notice warn" hidden>
+      <b>Practice mode.</b> Everything works the same, but tickets and credit are pretend. Get free practice credit (below), then follow the steps.
+      <button class="btn small secondary" id="practiceOff">Switch to a real fete</button>
+    </div>
+
+    <div class="card">
+      <h2>1. Add running credit</h2>
+      <p>The ticket system needs a small amount of <b>XDC</b> (a digital currency) to run — it pays tiny fees each time tickets move. About <b id="needEst">100 XDC</b> covers a typical fete (usually a few dollars' worth).</p>
+      <details id="howXdc" class="card" style="box-shadow:none;background:var(--bg);margin-bottom:12px">
+        <summary><b>How do I get XDC?</b></summary>
+        <div id="howXdcBody" style="margin-top:10px"></div>
+      </details>
+      <div id="creditBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>2. Create your tickets</h2>
+      <label class="field"><span>Fete name</span><input class="input" id="fName" maxlength="40" placeholder="e.g. Greenvale Public School Fete 2026"></label>
+      <label class="field"><span>Price of one ticket (<span data-cur></span>)</span><input class="input" id="fPrice" type="number" inputmode="decimal" min="0.05" step="0.05" value="1.00"></label>
+      <details class="small muted" style="margin-bottom:14px"><summary>More options</summary>
+        <label class="field" style="margin-top:10px"><span>Number of tickets to create</span><input class="input" id="fSupply" type="number" inputmode="numeric" min="1000" step="1000" value="2000000"></label>
+        <p>Create plenty — unsold tickets simply stay with you.</p>
+      </details>
+      <button class="btn huge" id="createBtn">Create tickets</button>
+    </div>
+    <div class="center"><button class="link" id="restoreOrg">Already set up on another phone? Restore your organiser backup</button></div>
+  </section>
+
+  <!-- JUST CREATED -->
+  <section data-view="published" hidden>
+    <div class="card center">
+      <div style="font-size:60px">🎉</div>
+      <h1>Your tickets are ready!</h1>
+      <p class="muted">Two quick things and you're set.</p>
+    </div>
+    <div class="card">
+      <h3>1. Save your organiser backup again</h3>
+      <p class="small">Your backup message now includes your fete. If this phone is ever lost, that one text gets everything back on a new phone.</p>
+      <button class="btn" id="pubBackup"><span class="emoji">📩</span> Save my backup</button>
+      <div class="notice ok" id="pubBackupDone" hidden>✓ Backup saved</div>
+    </div>
+    <div class="card">
+      <h3>2. Invite your helpers</h3>
+      <p class="small">Send your ticket booth and stall helpers their link — or print the helper sheets.</p>
+      <button class="btn secondary" id="pubInvite"><span class="emoji">👋</span> Invite helpers</button>
+    </div>
+    <button class="btn ghost" id="pubDone">Go to my dashboard</button>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section data-view="dash" hidden>
+    <div id="backupNag" class="notice bad" hidden>
+      <b>Save your organiser backup now.</b> Without it, losing this phone means losing control of the fete's tickets.
+      <button class="btn small" id="backupNow">Save it now</button>
+    </div>
+    <div id="creditWarn" class="notice warn" hidden></div>
+
+    <div class="card" id="checklistCard">
+      <h2>Getting ready</h2>
+      <ul class="list" id="checklist"></ul>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div><div class="muted small">Tickets with you</div><div style="font-size:26px;font-weight:800;color:var(--brand-dark)" id="dTickets">–</div></div>
+        <div style="text-align:right"><div class="muted small">Running credit</div><div style="font-size:26px;font-weight:800" id="dCredit">–</div></div>
+      </div>
+      <p class="small muted" style="margin:8px 0 0" id="dPrice"></p>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center"><h2 style="margin:0">Your team</h2><button class="btn small" id="refreshTeam" style="flex:none" aria-label="Refresh">↻</button></div>
+      <p class="small muted">Ticket booths and stalls. Tap one for options.</p>
+      <ul class="list" id="team"></ul>
+      <button class="btn" id="addMember"><span class="emoji">📷</span> Add a booth or stall</button>
+      <button class="btn secondary" id="inviteBtn2"><span class="emoji">👋</span> Invite helpers</button>
+    </div>
+
+    <div class="grid2">
+      <button class="btn secondary" id="reportBtn"><span class="emoji">📊</span> Totals</button>
+      <button class="btn secondary" id="postersBtn"><span class="emoji">🖨️</span> Posters</button>
+      <button class="btn secondary" id="creditBtn"><span class="emoji">⚡</span> Credit</button>
+      <button class="btn secondary" id="giftBtn"><span class="emoji">🎁</span> Give tickets</button>
+    </div>
+    <button class="btn ghost" id="dayGuideBtn">📋 On the day: what to do</button>
+    <button class="btn ghost" id="feteSettingsBtn">Fete name &amp; ticket price</button>
+  </section>
+
+  <!-- INVITE HELPERS -->
+  <section data-view="invite" hidden>
+    <h1>Invite your helpers</h1>
+    <p class="muted">Helpers use their own phones. Send each one the right link (text, WhatsApp, email…). It opens the app already connected to your fete.</p>
+    <div class="card">
+      <h3>🎟️ Ticket booth helpers</h3>
+      <p class="small">They sell tickets for cash or card.</p>
+      <div class="grid2"><button class="btn small" style="width:100%" data-share="booth">Send link</button><button class="btn secondary small" style="width:100%" data-copylink="booth">Copy link</button></div>
+    </div>
+    <div class="card">
+      <h3>🍭 Stall helpers</h3>
+      <p class="small">They take tickets for food, rides and games.</p>
+      <div class="grid2"><button class="btn small" style="width:100%" data-share="stall">Send link</button><button class="btn secondary small" style="width:100%" data-copylink="stall">Copy link</button></div>
+    </div>
+    <div class="card">
+      <h3>Then, for each helper</h3>
+      <ol class="steps">
+        <li>They open the link and follow the steps (about a minute).</li>
+        <li>They tap <b>Show this booth's / stall's code</b>.</li>
+        <li>You tap <b>Add a booth or stall</b> and scan it. That loads them up and they're ready.</li>
+      </ol>
+      <p class="small muted">Prefer paper? Print the helper sheets from <b>Posters</b> — each has a QR code to scan.</p>
+    </div>
+    <button class="btn secondary" data-dash>Back</button>
+  </section>
+
+  <!-- RUNNING CREDIT -->
+  <section data-view="credit" hidden>
+    <h1>Running credit</h1>
+    <div class="card" id="creditBox2"></div>
+    <div class="card">
+      <h3>How much do I need?</h3>
+      <label class="field"><span>Expected number of families using phones</span><input class="input" id="estPeople" type="number" inputmode="numeric" value="500"></label>
+      <p id="estOut"></p>
+    </div>
+    <button class="btn secondary" data-dash>Back</button>
+  </section>
+
+  <!-- REPORT -->
+  <section data-view="report" hidden>
+    <h1>Totals &amp; cash check</h1>
+    <div id="repBody"></div>
+    <button class="btn secondary" id="csvBtn" hidden>Download spreadsheet (CSV)</button>
+    <button class="btn ghost" data-dash>Back</button>
+  </section>
+
+  <!-- POSTERS -->
+  <section data-view="posters" hidden>
+    <h1 class="no-print">Posters &amp; helper sheets</h1>
+    <p class="muted no-print">Print these, or show them on this phone. Each has its own Print button.</p>
+    <div id="posterList"></div>
+    <button class="btn ghost no-print" data-dash>Back</button>
+  </section>
+
+  <!-- ON THE DAY -->
+  <section data-view="dayguide" hidden>
+    <h1>On the day</h1>
+    <div class="card"><h3>Before gates open</h3><ol class="steps">
+      <li>Every booth and stall phone opens its app and shows a balance (refresh on your dashboard to check).</li>
+      <li>Ticket booths have tickets loaded; everyone has running credit (no warnings on your dashboard).</li>
+      <li>Families' posters are up at the entrance and the ticket booth.</li>
+      <li>Phones are charged — bring a power bank or two for booths.</li></ol></div>
+    <div class="card"><h3>During the fete</h3><ul class="list">
+      <li><div class="grow"><b>A family can't pay — "needs a top-up"</b><span style="white-space:normal">Ticket booth taps <b>Fix a phone</b> and scans them. Free, takes seconds.</span></div></li>
+      <li><div class="grow"><b>A booth is running low on tickets</b><span style="white-space:normal">Tap the booth in <b>Your team</b> → Load more tickets.</span></div></li>
+      <li><div class="grow"><b>Someone's tickets disappeared</b><span style="white-space:normal">They open the app, tap <b>I've used this before</b>, and paste their backup text.</span></div></li>
+      <li><div class="grow"><b>A family wants their money back</b><span style="white-space:normal">Ticket booth taps <b>Buy back</b>; the app says how much cash to hand over.</span></div></li>
+      <li><div class="grow"><b>No phone / no internet</b><span style="white-space:normal">Keep a roll of paper tickets at the booth as a backup.</span></div></li></ul></div>
+    <div class="card"><h3>After the fete</h3><ol class="steps">
+      <li>Each booth opens <b>Cash check</b> — cash and card totals to match against the tin and the card machine.</li>
+      <li>Booths send unsold tickets back; stalls <b>hand in</b> their tickets.</li>
+      <li>You open <b>Totals</b> and download the spreadsheet for the treasurer.</li></ol></div>
+    <button class="btn secondary" data-dash>Back</button>
+  </section>
+</main>
+<script src="../config.js"></script>
+<script src="../shared/vendor/ethers.umd.min.js"></script>
+<script src="../shared/vendor/qrcode.js"></script>
+<script src="../shared/vendor/jsQR.js"></script>
+<script src="../shared/contract.js"></script>
+<script src="../shared/core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

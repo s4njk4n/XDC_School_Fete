@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ticket Booth</title>
+<meta name="theme-color" content="#f26a1b">
+<meta name="description" content="Sell fete tickets">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/booth-192.png">
+<link rel="apple-touch-icon" href="../icons/booth-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ticket Booth">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="../shared/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="title"><b>Ticket Booth</b><small data-fete-name>&nbsp;</small></div>
+  <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+</header>
+
+<main>
+  <section data-view="home" hidden>
+    <div id="setupNote" class="notice info" hidden>
+      <b>Get tickets to sell.</b> Ask the fete organiser to scan this phone's code.
+      <button class="btn small" id="showCode2">Show my code</button>
+    </div>
+    <div id="creditWarn" class="notice warn" hidden></div>
+    <div id="backupNag" class="notice warn" hidden>
+      <b>Save this phone's backup</b> in case anything happens to it.
+      <button class="btn small" id="backupNow">Save it now</button>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <div><div class="muted small">Tickets left to sell</div><div style="font-size:30px;font-weight:800;color:var(--brand-dark)" id="float">–</div></div>
+        <div style="text-align:right"><div class="muted small">Price</div><div style="font-weight:700" id="price">–</div></div>
+      </div>
+    </div>
+
+    <h3 style="margin:4px 4px 10px">Sell tickets — tap what they paid</h3>
+    <div class="grid3" id="quick"></div>
+    <div style="height:12px"></div>
+    <button class="btn secondary" id="otherBtn">Other amount</button>
+
+    <div class="grid2">
+      <button class="btn secondary" id="topupBtn"><span class="emoji">⚡</span> Fix a phone</button>
+      <button class="btn secondary" id="buybackBtn"><span class="emoji">↩️</span> Buy back</button>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center;margin-bottom:6px"><h3 style="margin:0">Today</h3><button class="btn ghost small" id="totalsBtn" style="flex:none">Cash check ›</button></div>
+      <div class="stat-grid">
+        <div class="stat"><b id="tSold">0</b><span>tickets sold</span></div>
+        <div class="stat"><b id="tMoney">$0</b><span>taken (cash + card)</span></div>
+      </div>
+      <ul class="list" id="recent" style="margin-top:8px"></ul>
+    </div>
+    <button class="btn ghost" id="myCodeBtn">Show this booth's code (for the organiser)</button>
+  </section>
+
+  <section data-view="mycode" hidden>
+    <div class="center">
+      <h1>This booth's code</h1>
+      <p class="muted">The organiser scans this to load tickets and running credit onto this phone.</p>
+      <div class="qr big" id="myQr"></div>
+      <button class="btn secondary" data-home>Back</button>
+    </div>
+  </section>
+
+  <section data-view="request" hidden>
+    <div class="center">
+      <h1 id="reqTitle">Customer: scan this</h1>
+      <p class="muted" id="reqSub"></p>
+      <div class="qr big" id="reqQr"></div>
+      <div class="pill" id="reqStatus"><span class="spinner sm"></span>&nbsp; Waiting for the customer…</div>
+      <div style="height:18px"></div>
+      <button class="btn ghost" id="reqCancel">Cancel</button>
+    </div>
+  </section>
+
+  <section data-view="totals" hidden>
+    <h1>Cash check</h1>
+    <div class="seg" id="totalsRange"><button data-r="today" class="on">Today</button><button data-r="all">All time</button></div>
+    <div class="card">
+      <div class="stat-grid">
+        <div class="stat"><b id="cCash">$0</b><span>cash taken</span></div>
+        <div class="stat"><b id="cCard">$0</b><span>card taken</span></div>
+        <div class="stat"><b id="cBack">$0</b><span>paid back (buy-backs)</span></div>
+        <div class="stat"><b id="cSales">0</b><span>sales</span></div>
+      </div>
+      <div class="notice info" style="margin:14px 0 0">The cash tin should hold <b id="cTin">$0</b> more than it started with.</div>
+    </div>
+    <div class="card"><h3>All sales</h3><ul class="list" id="allList"></ul></div>
+    <button class="btn secondary" id="returnBtn">End of day: send unsold tickets back to organiser</button>
+    <button class="btn ghost" data-home>Back</button>
+  </section>
+</main>
+<script src="../config.js"></script>
+<script src="../shared/vendor/ethers.umd.min.js"></script>
+<script src="../shared/vendor/qrcode.js"></script>
+<script src="../shared/vendor/jsQR.js"></script>
+<script src="../shared/contract.js"></script>
+<script src="../shared/core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fete Tickets</title>
+<meta name="theme-color" content="#6d3df5">
+<meta name="description" content="Your fete tickets on your phone">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/customer-192.png">
+<link rel="apple-touch-icon" href="../icons/customer-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tickets">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="../shared/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="title"><b>My Fete Tickets</b><small data-fete-name>&nbsp;</small></div>
+  <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section data-view="home" hidden>
+    <div id="backupNag" class="notice warn" hidden>
+      <b>Save your backup</b> so you can't lose your tickets.
+      <button class="btn small" id="backupNow">Save it now</button>
+    </div>
+
+    <div id="installTip" class="notice info" hidden>
+      <div class="row" style="align-items:flex-start;gap:8px">
+        <div style="flex:1">📲 <b>Tip:</b> add this to your home screen so it's easy to find today.</div>
+        <button class="link" id="installTipX" aria-label="Dismiss" style="flex:none;padding:0 4px;text-decoration:none;font-size:20px">✕</button>
+      </div>
+      <button class="btn small" id="installTipGo">Show me how</button>
+    </div>
+
+    <div class="card hero">
+      <div class="muted small">You have</div>
+      <div class="big-number" id="bal">–</div>
+      <div class="unit" id="balUnit">tickets</div>
+      <div class="pill" id="balMoney" style="margin-top:10px" hidden></div>
+    </div>
+
+    <button class="btn huge" id="payBtn"><span class="emoji">📷</span> Pay at a stall</button>
+    <div class="grid2">
+      <button class="btn secondary" id="getBtn"><span class="emoji">🎟️</span> Get tickets</button>
+      <button class="btn secondary" id="giveBtn"><span class="emoji">🎁</span> Give tickets</button>
+    </div>
+
+    <div class="card">
+      <h3>Recent</h3>
+      <ul class="list" id="recent"></ul>
+      <button class="btn ghost small" id="allBtn" hidden>See everything</button>
+    </div>
+  </section>
+
+  <!-- MY CODE (to receive tickets) -->
+  <section data-view="mycode" hidden>
+    <div class="center">
+      <h1>Show this to the ticket booth</h1>
+      <p class="muted">Pay them with cash or card, then they'll scan this code and your tickets appear here.</p>
+      <div class="qr big" id="myQr"></div>
+      <div class="pill" id="liveBal">You have – tickets</div>
+      <div style="height:18px"></div>
+      <button class="btn secondary" data-home>Back</button>
+    </div>
+  </section>
+
+  <!-- PAY CONFIRM -->
+  <section data-view="pay" hidden>
+    <div class="card hero">
+      <div class="muted">Pay</div>
+      <div class="big-number" id="payAmt">–</div>
+      <div class="unit" id="payUnit">tickets</div>
+      <h2 id="payTo" style="margin:14px 0 4px"></h2>
+      <div class="muted" id="payLabel"></div>
+    </div>
+    <div id="payWarn" class="notice bad" hidden></div>
+    <p class="center muted small" id="payAfter"></p>
+    <button class="btn huge ok" id="payGo">Pay now</button>
+    <button class="btn ghost" data-home>Cancel</button>
+  </section>
+
+  <!-- HISTORY -->
+  <section data-view="history" hidden>
+    <h1>Everything</h1>
+    <div class="card"><ul class="list" id="allList"></ul></div>
+    <button class="btn secondary" data-home>Back</button>
+  </section>
+</main>
+<script src="../config.js"></script>
+<script src="../shared/vendor/ethers.umd.min.js"></script>
+<script src="../shared/vendor/qrcode.js"></script>
+<script src="../shared/vendor/jsQR.js"></script>
+<script src="../shared/contract.js"></script>
+<script src="../shared/core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fete Tickets — run your school fete on phones</title>
+<meta name="description" content="Free phone tickets for school fetes. Families buy tickets at the booth and pay at any stall by scanning a code. Set it up yourself in an afternoon.">
+<meta name="theme-color" content="#6d3df5">
+<link rel="icon" type="image/png" href="icons/customer-192.png">
+<link rel="apple-touch-icon" href="icons/customer-180.png">
+<link rel="stylesheet" href="shared/app.css">
+<style>
+  body { -webkit-user-select: text; user-select: text; }
+  .hero-top { background: linear-gradient(135deg, #6d3df5, #f26a1b); color: #fff; padding: calc(40px + env(safe-area-inset-top, 0px)) 20px 40px; text-align: center; }
+  .hero-top h1 { font-size: 34px; margin: 0 0 10px; line-height: 1.15; }
+  .hero-top p { margin: 0 auto 22px; max-width: 480px; font-size: 18px; opacity: .95; }
+  .hero-top .btn { max-width: 380px; margin-left: auto; margin-right: auto; }
+  .hero-top .btn.white { background: #fff; color: #4a22c4; box-shadow: 0 3px 0 rgba(0,0,0,.2); }
+  .hero-top .btn.clear { background: rgba(255,255,255,.18); box-shadow: none; }
+  .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .roles .card { margin: 0; text-align: center; padding: 14px 10px; }
+  .roles img { width: 56px; height: 56px; border-radius: 14px; display: block; margin: 0 auto 8px; }
+  .roles b { display: block; }
+  .roles span { font-size: 14px; color: var(--muted); }
+  .need li { padding: 6px 0 6px 30px; position: relative; list-style: none; }
+  .need li::before { content: "✓"; position: absolute; left: 4px; color: var(--ok); font-weight: 800; }
+  .need { padding: 0; margin: 0; }
+  details.faq { border-bottom: 1px solid var(--line); padding: 12px 2px; }
+  details.faq:last-child { border-bottom: 0; }
+  details.faq summary { font-weight: 700; cursor: pointer; }
+  details.faq p { margin: 8px 0 0; color: #3a3850; }
+  .step-detail { color: #3a3850; font-size: 15.5px; margin-top: 2px; }
+  .sec-title { margin: 26px 4px 12px; font-size: 23px; }
+  main { padding-top: 6px; }
+</style>
+</head>
+<body>
+<div class="hero-top">
+  <h1>🎡 Run your school fete on phones</h1>
+  <p>The ticket system your fete already uses — buy tickets at the booth, spend them at the stalls — but on phones. Free for any school. Families don't need to download anything.</p>
+  <a class="btn huge white" href="organiser/">I'm organising a fete — start here</a>
+  <a class="btn clear" href="organiser/?net=test">🧪 Try a free practice fete first</a>
+</div>
+
+<main>
+  <h2 class="sec-title">How it works</h2>
+  <div class="card">
+    <ol class="steps">
+      <li><b>Families buy tickets</b> at the ticket booth with cash or card, just like now. The booth helper scans the family's phone and the tickets appear on it.</li>
+      <li><b>They spend them at stalls.</b> The stall shows a code; the family scans it and taps <b>Pay</b>. Both phones show a big green tick.</li>
+      <li><b>At the end, you get the totals</b> — every booth's cash and card, every stall's takings — ready for the treasurer.</li>
+    </ol>
+  </div>
+
+  <div class="roles">
+    <div class="card"><img src="icons/organiser-192.png" alt=""><b>Organiser</b><span>Sets it up and sees the totals</span></div>
+    <div class="card"><img src="icons/booth-192.png" alt=""><b>Ticket booth</b><span>Sells tickets</span></div>
+    <div class="card"><img src="icons/stall-192.png" alt=""><b>Stalls</b><span>Take tickets</span></div>
+    <div class="card"><img src="icons/customer-192.png" alt=""><b>Families</b><span>Buy and spend tickets</span></div>
+  </div>
+
+  <h2 class="sec-title">What you'll need</h2>
+  <div class="card">
+    <ul class="need">
+      <li>One phone for the organiser (a laptop works too).</li>
+      <li>Your helpers' own phones — one per ticket booth and one per stall.</li>
+      <li>A few dollars' worth of <b>XDC</b> for "running credit" (the app explains how to get it). Not needed for a practice run.</li>
+      <li>A printer for the posters (or just show them on a phone).</li>
+      <li>About an hour to set up, plus a quick practice with your committee.</li>
+    </ul>
+  </div>
+
+  <h2 class="sec-title">Setting up, step by step</h2>
+  <div class="card">
+    <p class="muted small">The Organiser app walks you through all of this with a checklist — this is just so you know what's ahead.</p>
+    <ol class="steps">
+      <li><b>Do a practice run.</b><div class="step-detail">Tap <a href="organiser/?net=test">Try a free practice fete</a>. It uses pretend credit, so your committee can try every step for free — selling, paying, refunds and totals.</div></li>
+      <li><b>Set up the organiser phone.</b><div class="step-detail">Open the <a href="organiser/">Organiser app</a>, add it to your home screen, and <b>text yourself the backup</b> when asked. That one text message lets you recover everything if your phone is lost.</div></li>
+      <li><b>Add running credit.</b><div class="step-detail">The app shows an address to send XDC to and how much you need (around 100 XDC for 500 families — usually a few dollars). Leftover credit stays for next year.</div></li>
+      <li><b>Create your tickets.</b><div class="step-detail">Enter your fete's name and the price of one ticket. Tap <b>Create tickets</b>. Then save your backup again — it now includes your fete.</div></li>
+      <li><b>Invite your helpers.</b><div class="step-detail">Tap <b>Invite helpers</b> to text each ticket booth and stall helper their link, or print the helper sheets. Each link opens the right app, already connected to your fete.</div></li>
+      <li><b>Add each booth and stall.</b><div class="step-detail">Each helper shows you a code in their app. Tap <b>Add a booth or stall</b> and scan it — that loads the booth with tickets and gives everyone a little running credit.</div></li>
+      <li><b>Put up the family posters.</b><div class="step-detail">Print the <b>Pay with your phone!</b> poster for the entrance and the ticket booth. Families scan it with their camera and they're in.</div></li>
+      <li><b>On the day.</b><div class="step-detail">The app has an "On the day" page with what to check before the gates open and how to handle common questions.</div></li>
+      <li><b>Afterwards.</b><div class="step-detail">Booths open <b>Cash check</b> to match the tin and card machine. You open <b>Totals</b> and download the spreadsheet.</div></li>
+    </ol>
+    <a class="btn" href="organiser/">Start setting up</a>
+  </div>
+
+  <h2 class="sec-title">Helping or visiting a fete?</h2>
+  <div class="card">
+    <p><b>Use the link or QR code from your fete.</b> It opens the right app already connected to your school's fete.</p>
+    <p class="small muted">Lost the link? Open the right app below and it'll ask you to scan any of your fete's QR codes (a poster, or the organiser's phone).</p>
+    <div class="grid3">
+      <a class="btn secondary small" style="width:100%" href="customer/">Family</a>
+      <a class="btn secondary small" style="width:100%" href="booth/">Booth</a>
+      <a class="btn secondary small" style="width:100%" href="stall/">Stall</a>
+    </div>
+  </div>
+
+  <h2 class="sec-title">Questions</h2>
+  <div class="card">
+    <details class="faq"><summary>Does it cost anything?</summary><p>The apps are free. The only cost is a small amount of XDC "running credit" that pays the tiny network fees each time tickets move — usually a few dollars for a whole fete. Practice runs are completely free.</p></details>
+    <details class="faq"><summary>Do families have to install an app?</summary><p>No. They scan the poster and it opens in their phone's browser. Adding it to the home screen is optional. Helpers are asked to add their app to the home screen because they'll use it all day.</p></details>
+    <details class="faq"><summary>What if someone loses their phone or their tickets disappear?</summary><p>When anyone starts, the app asks them to text themselves a backup message. Pasting that message back into the app — on any phone — brings their tickets back. The same goes for the organiser, whose backup also brings back the whole fete and team list.</p></details>
+    <details class="faq"><summary>Do tickets have any value outside the fete?</summary><p>No. Just like paper tickets, they're only for spending at your fete. The money itself never goes through the app — families pay the ticket booth with cash or card as usual.</p></details>
+    <details class="faq"><summary>What if the internet drops out?</summary><p>Phones need mobile data or Wi-Fi to buy and spend tickets. The apps reconnect by themselves and show a notice while offline. We recommend keeping a roll of paper tickets at the booth as a backup, just in case.</p></details>
+    <details class="faq"><summary>How does it work behind the scenes?</summary><p>Tickets are recorded on the XDC Network, a fast, low-cost public ledger, which is why every movement can be counted exactly for the totals. Nobody at the fete needs to know or do anything about that — it just works in the background.</p></details>
+    <details class="faq"><summary>Can families just use their phone's camera?</summary><p>Yes. The poster and every stall's payment code work with the phone's ordinary camera — it opens straight to the right screen. The in-app <b>Pay at a stall</b> button works too.</p></details>
+    <details class="faq"><summary>Can lots of schools use this at the same time?</summary><p>Yes. Each school creates its own tickets, so fetes are completely separate — one school's tickets can't be spent at another school's fete, and each school sees only its own totals. A family who goes to two fetes keeps the two sets of tickets apart automatically and can switch between them in Settings.</p></details>
+    <details class="faq"><summary>Can we use it again next year?</summary><p>Yes. In the Organiser app, go to Settings → <b>Set up a different fete</b>. Any leftover running credit carries over.</p></details>
+  </div>
+</main>
+<div class="footer">Free for any school · Built by <a href="https://xdcoutpost.xyz" target="_blank" rel="noopener">XDC Outpost</a></div>
+</body>
+</html>
