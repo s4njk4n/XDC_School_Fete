@@ -1,6 +1,6 @@
 /* Fete Tickets — offline helper. Keeps the apps opening even on patchy fete Wi-Fi.
    Network first (so updates arrive straight away), falling back to the saved copy. */
-const CACHE = 'fete-tickets-v4';
+const CACHE = 'fete-tickets-v6';
 const CORE = [
   './', './index.html', './config.js',
   './shared/app.css', './shared/core.js', './shared/contract.js',

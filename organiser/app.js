@@ -157,16 +157,15 @@
     F.showView('dash');
     refreshDash();
   }
-  let lastCredit = null;
   async function refreshDash() {
     try {
       const [t, c, one] = await Promise.all([F.ticketBalance(), F.creditBalance(), F.costOfOne(true)]);
-      lastCredit = c;
       $('#dTickets').textContent = F.fmt(t);
       $('#dCredit').textContent = F.xdc(c) + ' XDC';
       const w = $('#creditWarn');
-      w.hidden = c > one * 50n;
-      w.innerHTML = '<b>Running credit is low.</b> Tap <b>Credit</b> to add more.';
+      // Low = not enough to set up another booth (or very few transactions left).
+      w.hidden = c >= XDC(F.CFG.boothCredit) && c > one * 200n;
+      w.innerHTML = '<b>Running credit is getting low</b> (' + F.xdc(c) + ' XDC). Tap <b>Credit</b> to add more before adding more booths or stalls.';
     } catch (e) { }
     await refreshTeam();
     renderChecklist();

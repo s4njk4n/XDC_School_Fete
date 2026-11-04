@@ -102,6 +102,11 @@
       } else {
         await F.splash('Late payment received', F.tix(n) + (label ? ' · ' + label : '') + ' — paid after the sale was cancelled.', true, 4000);
       }
+    }, async () => {
+      // Someone paid the same code again (e.g. two customers scanned one QR).
+      F.history.add({ type: 'sale', amount: n, label: 'Paid twice: ' + (label || 'sale') });
+      await F.alertSheet('That code was paid twice',
+        'A second customer also paid ' + F.tix(n) + (label ? ' (' + label + ')' : '') + ' using the same code. If it was a mistake, give them a refund (↩️ Refund) or serve them.');
     });
     request = w;
   }
@@ -192,12 +197,12 @@
     $('#myQr').innerHTML = F.qrSvg(F.Codes.member('S', F.myAddress(), stallName()));
     F.showView('mycode');
     (async function waitAdded() {
-      const start = await F.creditBalance().catch(() => null);
-      while (document.body.dataset.current === 'mycode' && start !== null) {
-        await F.sleep(3000);
+      if (await F.isTeamMember(F.myAddress())) return; // already on the team
+      while (document.body.dataset.current === 'mycode') {
+        await F.sleep(4000);
         if (document.body.dataset.current !== 'mycode') return; // they moved on; the join note updates by itself
-        const now = await F.creditBalance().catch(() => start);
-        if (now > start && document.body.dataset.current === 'mycode') {
+        const now = await F.isTeamMember(F.myAddress());
+        if (now && document.body.dataset.current === 'mycode') {
           F.fstore.set('joined', 1);
           $('#joinNote').hidden = true;
           await F.splash('You\'re in!', 'The organiser has added your stall. Ready to sell.');
@@ -217,15 +222,14 @@
   ).then((a) => { if (a === 'name') askName(false); });
 
   $('#joinCode').onclick = () => $('#myCodeBtn').click();
-  // Until the organiser has added this stall (they send it a little running credit), show how to join.
+  // Until the organiser has added this stall to the team, show how to join. (Families get a
+  // "check before paying" warning for stalls that aren't on the team, so this matters.)
   (async function checkJoined() {
-    try {
-      const [c, t] = await Promise.all([F.creditBalance(), F.ticketBalance()]);
-      const joined = c > 0n || t > 0n || F.history.list().length > 0;
-      if (joined) F.fstore.set('joined', 1);
-      $('#joinNote').hidden = joined || !!F.fstore.get('joined');
-      if (!joined && !F.fstore.get('joined')) setTimeout(checkJoined, 8000);
-    } catch (e) { setTimeout(checkJoined, 8000); }
+    const ok = await F.isTeamMember(F.myAddress());
+    if (ok) { F.fstore.set('joined', 1); $('#joinNote').hidden = true; return; }
+    if (ok === false) F.fstore.del('joined');
+    $('#joinNote').hidden = ok === null ? !!F.fstore.get('joined') : false;
+    setTimeout(checkJoined, 15000);
   })();
 
   if (!stallName()) await askName(true);

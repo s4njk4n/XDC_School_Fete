@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 XDC Outpost. All rights reserved.
 pragma solidity ^0.8.24;
 
 /// @title  FeteTickets
@@ -30,7 +31,6 @@ contract FeteTickets {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event SettingsChanged(string name, uint256 centsPerTicket);
-    event OrganiserChanged(address indexed previous, address indexed next);
     /// kind: 1 = ticket booth, 2 = stall, 0 = removed from the team
     event HelperSet(address indexed helper, uint8 kind, string label);
 
@@ -106,12 +106,6 @@ contract FeteTickets {
         name = feteName;
         centsPerTicket = cents;
         emit SettingsChanged(feteName, cents);
-    }
-
-    function setOrganiser(address next) external onlyOrganiser {
-        require(next != address(0), "Bad address");
-        emit OrganiserChanged(organiser, next);
-        organiser = next;
     }
 
     function _transfer(address from, address to, uint256 value) internal {

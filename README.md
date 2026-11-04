@@ -4,7 +4,9 @@
 
 Built by [XDC Outpost](https://xdcoutpost.xyz) · Live at **https://xdcoutpost.xyz/XDC_School_Fete/**
 
-> **Any school can use this site as is.** Nothing in this repository needs to be edited, forked or configured to run a fete. A school's organiser opens the website, and the Organiser app walks them through everything.
+> **One website for every school.** Fete Tickets runs from **xdcoutpost.xyz** for any number of schools and fetes at the same time, each completely separate. There's nothing to install, copy or configure: a school's organiser opens the website and the Organiser app walks them through everything.
+>
+> **Want a hand?** XDC Outpost built Fete Tickets and can help your school set up and run its fete. Get in touch via **[xdcoutpost.xyz](https://xdcoutpost.xyz)**.
 
 ---
 
@@ -46,7 +48,7 @@ Go to **https://xdcoutpost.xyz/XDC_School_Fete/** and tap **I'm organising a fet
 - **Totals come from the network,** so they're exact even if a helper's phone is lost. The apps read events in adaptive chunks: they start at 50,000 blocks, halve when a server objects, and remember what worked.
 - **Practice mode:** `?net=test` (or Settings → Technical details → Connection server) uses XDC's Apothem test network with free test credit from <https://faucet.blocksscan.io/>. A banner shows on every screen in practice mode.
 
-`config.js` holds only host-wide defaults: the connection server, currency symbol, credit amounts and footer credit. Its `feteAddress` is left empty on purpose.
+`config.js` holds only site-wide defaults: the connection server, currency symbol, credit amounts and footer credit. It never names a fete, so the one site serves every school.
 
 ## How it works (technical)
 
@@ -61,17 +63,28 @@ Go to **https://xdcoutpost.xyz/XDC_School_Fete/** and tap **I'm organising a fet
   |---|---|
   | `FETE:C:<addr>` | Person |
   | `FETE:B:<addr>:<name>` / `FETE:S:<addr>:<name>` | Booth or stall joining |
-  | `FETE:P:<addr>:<amountWei>:<label>` | Payment request |
-  | `FETE:F:<token>:<chainId>` | Fete |
-  | `https://…?fete=0x…` | Fete link |
+  | `https://…/customer/?fete=0x…&pay=<addr>&amt=<wei>&for=<label>` | Payment request (a web link, so any camera works) |
+  | `https://…?fete=0x…` | Fete link (posters, invites) |
   | Plain `0x…` / `xdc…` address | Person |
 
 - **No build step:** plain HTML, CSS and JS. The libraries are included in `shared/vendor/`: ethers v6, jsQR and qrcode-generator. `sw.js` keeps the apps opening on patchy Wi-Fi.
 - **Contract:** solc 0.8.24, optimiser 200 runs, `evmVersion: paris`. The ABI and bytecode are in `contract/FeteTickets.json` and embedded in `shared/contract.js`.
 
-## Hosting your own copy (optional)
+## Getting help
 
-Fork or upload this folder to any static host with HTTPS. For GitHub Pages: create a repo, upload the contents, then go to **Settings → Pages → Deploy from a branch → `main` / root**. No other setup is needed.
+XDC Outpost built Fete Tickets and is the place to go for help: setting up your first fete, a practice run with your committee, running credit, or anything on the day. Visit **[xdcoutpost.xyz](https://xdcoutpost.xyz)**.
+
+Please always use the official site, **https://xdcoutpost.xyz/XDC_School_Fete/**. It's kept up to date, and every school's links, posters and backups point to it.
+
+## Copyright
+
+Copyright © 2026 XDC Outpost. All rights reserved. See [`LICENSE`](LICENSE).
+
+Schools and community groups are welcome to use the hosted service at xdcoutpost.xyz. The source code is published for transparency, but it may not be copied, modified, redistributed or hosted elsewhere without written permission from XDC Outpost.
+
+## Third-party libraries
+
+Included under `shared/vendor/` with their licences: [ethers.js](https://github.com/ethers-io/ethers.js) (MIT, `LICENSE-ethers.md`), [jsQR](https://github.com/cozmo/jsQR) (Apache 2.0, `LICENSE-jsQR.txt`) and [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT, notice in the file header).
 
 ## Good to know
 

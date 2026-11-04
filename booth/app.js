@@ -23,7 +23,7 @@
 
   // ---------------------------------------------------------------- rendering
   function renderQuick() {
-    const amounts = [5, 10, 20, 50, 2, 100];
+    const amounts = [2, 5, 10, 20, 50, 100];
     $('#quick').innerHTML = amounts.map((d) =>
       '<button class="amount-btn" data-d="' + d + '"><b>' + F.dollars(d).replace(/\.00$/, '') + '</b><span>' + F.tix(ticketsFor(d)) + '</span></button>').join('');
     $$('#quick [data-d]').forEach((b) => (b.onclick = () => sell(Number(b.dataset.d))));
@@ -70,7 +70,16 @@
     } catch (e) { }
     render();
   }
-  function home() { render(); F.showView('home'); refresh(); }
+  // Pick up a new ticket price (or fete name) set by the organiser, without needing a reload.
+  let infoAt = Date.now();
+  async function refreshInfo() {
+    if (Date.now() - infoAt < 60000) return;
+    infoAt = Date.now();
+    const before = cents();
+    try { await F.loadInfo(true); } catch (e) { return; }
+    if (cents() !== before) { renderQuick(); F.toast('Ticket price is now ' + F.dollars(cents() / 100), 'ok'); }
+  }
+  function home() { render(); F.showView('home'); refresh(); refreshInfo(); }
 
   // ---------------------------------------------------------------- selling
   async function sell(dollarsPaid, ticketsOverride) {
@@ -205,6 +214,10 @@
         render();
         await F.splash('Late buy-back received', F.tix(n) + ' arrived after you cancelled. Give the customer ' + F.dollars(d) + '.');
       }
+    }, async () => {
+      F.history.add({ type: 'buyback', amount: n, dollars: d });
+      render();
+      await F.alertSheet('That buy-back code was used twice', 'Another ' + F.tix(n) + ' arrived on the same code. Give that customer ' + F.dollars(d) + ' as well.');
     });
     request = w;
   };

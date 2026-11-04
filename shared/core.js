@@ -14,7 +14,6 @@
 
   const VERSION = '1.0.0';
   const CFG = Object.assign({
-    feteAddress: '',
     defaultRpc: 'https://rpc.plugin.global/xdcmainnet',
     currency: '$',
     customerCredit: '0.05',
@@ -29,6 +28,12 @@
     { id: 'main', label: 'Normal (recommended)', url: 'https://rpc.plugin.global/xdcmainnet', chainId: 50 },
     { id: 'test', label: 'Practice mode (test network)', url: 'https://rpc.plugin.global/xdcapothem', chainId: 51 }
   ];
+
+  // Links can only pick the normal or practice server (?net=test). The only other server a link
+  // may name is a local test node (?rpc=http://localhost…), used for development. This stops a
+  // prank link pointing phones at a server that could fake "PAID" screens. Anyone can still
+  // choose a different server by hand under Settings → Technical details.
+  const trustedRpc = (u) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(String(u || ''));
 
   const APPS = {
     customer:  { name: 'Fete Tickets',   path: 'customer/',  icon: 'customer' },
@@ -71,27 +76,29 @@
     const p = new URLSearchParams(location.search);
     const f = p.get('fete');
     if (f && /^(0x|xdc)[0-9a-f]{40}$/i.test(f)) noteSwitch('0x' + f.slice(-40));
-    if (p.get('rpc')) store.set('rpc', p.get('rpc'));
+    if (p.get('rpc') && trustedRpc(p.get('rpc'))) store.set('rpc', p.get('rpc'));
     else if (p.get('net') === 'test') store.set('rpc', SERVERS[1].url);
     else if (f || p.get('net') === 'main') store.del('rpc');
   })();
 
   /** Remember the new fete, and which fete this phone was on before (so we can tell the person). */
   function noteSwitch(next) {
-    const prev = store.get('fete');
-    if (next && prev && prev !== 'none' && prev.toLowerCase() !== next.toLowerCase()) store.set('switchedFrom', prev);
-    store.set('fete', next || 'none');
+    // (runs during start-up, before feteAddress() exists, so read storage directly)
+    const stored = store.get('fete');
+    const prev = stored && stored !== 'none' ? stored : '';
+    if (next && prev && prev.toLowerCase() !== next.toLowerCase()) store.set('switchedFrom', prev);
+    if (next) store.set('fete', next); else store.del('fete');
   }
 
   const rpcUrl = () => store.get('rpc') || CFG.defaultRpc;
-  const feteAddress = () => { const s = store.get('fete'); if (s === 'none') return ''; return s || CFG.feteAddress || ''; };
+  const feteAddress = () => { const s = store.get('fete'); return s && s !== 'none' ? s : ''; };
 
   function linkQuery(fete) {
     const q = new URLSearchParams();
     if (fete) q.set('fete', fete);
     const r = rpcUrl();
     if (r === SERVERS[1].url) q.set('net', 'test');
-    else if (r !== CFG.defaultRpc && r !== SERVERS[0].url) q.set('rpc', r);
+    else if (trustedRpc(r)) q.set('rpc', r); // local test node only
     return q.toString();
   }
   /** Keep the address bar in step with the fete this phone belongs to. */
@@ -105,6 +112,30 @@
     if (url !== location.pathname + location.search + location.hash) {
       try { history.replaceState(null, '', url); } catch (e) { }
     }
+    refreshManifest();
+  }
+
+  // The static manifest has start_url "./" (Chrome requires one to offer installing). Once we know
+  // the fete, swap in a copy whose start_url is this exact link, so an installed home-screen app
+  // always opens on the right fete — even on iPhone, where it gets its own separate storage.
+  let baseManifest = null;
+  async function refreshManifest() {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link || !feteAddress()) return;
+    try {
+      if (!baseManifest) {
+        const href = new URL(link.dataset.src || link.getAttribute('href'), location.href).href;
+        link.dataset.src = href;
+        baseManifest = { url: href, json: await (await fetch(href)).json() };
+      }
+      const m = JSON.parse(JSON.stringify(baseManifest.json));
+      const abs = (u) => new URL(u, baseManifest.url).href;
+      m.id = abs(m.id || './');
+      m.scope = abs(m.scope || './');
+      m.start_url = location.href.split('#')[0];
+      m.icons = (m.icons || []).map((i) => Object.assign({}, i, { src: abs(i.src) }));
+      link.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(m)));
+    } catch (e) { /* keep the static manifest */ }
   }
   /** Switch this phone to a fete (or to none). chainId picks the matching server. */
   function setFete(addr, chainId, quiet) {
@@ -122,7 +153,6 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
 
   function toWei(n) {
     const v = Math.round(Number(n) * 100) / 100;
@@ -248,7 +278,7 @@
       known.unshift({ address: fa, name, chainId: state.chainId, rpc: store.get('rpc') || null, last: Date.now() });
       store.set('fetes', known.slice(0, 20));
     } catch (e) {
-      if (!state.info) throw new Friendly('Fete not found', 'This phone can\'t find the fete\'s tickets. Check the connection, or scan the fete setup code again (Settings).', 'NOFETE');
+      if (!state.info) throw new Friendly('Fete not found', 'This phone can\'t find the fete\'s tickets. Check the internet connection. If it still fails, open the fete\'s link again or scan one of its QR codes (Settings → Technical details → Change fete).', 'NOFETE');
     }
     $$('[data-fete-name]').forEach((el) => (el.textContent = state.info.name));
     return state.info;
@@ -318,6 +348,56 @@
   async function costOfOne(give) { return (give ? GAS_GIVE : GAS_TRANSFER) * (await gasPrice()); }
 
   // ------------------------------------------------------------------ chain writes
+  // Public servers are load-balanced, so one node may not yet know about a transaction another
+  // node just confirmed. We remember the next nonce after each *confirmed* send (never ahead of
+  // the truth) and take whichever is higher. We also sign locally, so if a retry turns out to be
+  // the same transaction ("already known") we simply wait for it instead of sending twice.
+  async function nextNonce() {
+    const me = myAddress();
+    const chain = Number(await retry(() => state.provider.send('eth_getTransactionCount', [me, 'pending'])));
+    const local = store.get(rk('nonce'), null);
+    if (local && local.addr === me && local.chainId === state.chainId && local.n > chain) return local.n;
+    return chain;
+  }
+  function commitNonce(n) { store.set(rk('nonce'), { addr: myAddress(), chainId: state.chainId, n: n + 1 }); }
+
+  async function sendRaw(req) {
+    const gp = await gasPrice();
+    let nonce = await nextNonce();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const signed = await state.wallet.signTransaction({
+        type: 0, chainId: state.chainId, gasPrice: gp, nonce,
+        to: req.to || null, data: req.data || '0x', value: req.value || 0n, gasLimit: req.gasLimit
+      });
+      const hash = ethers.keccak256(signed);
+      try {
+        await state.provider.send('eth_sendRawTransaction', [signed]);
+        setOnline(true);
+        return { hash, nonce };
+      } catch (e) {
+        const m = String((e && (e.shortMessage || e.message)) || '').toLowerCase() + ' ' + JSON.stringify((e && e.error) || '').toLowerCase();
+        if (/already known|known transaction|already imported/.test(m)) return { hash, nonce };
+        if (/nonce too low|nonce has already been used|replacement/.test(m) && attempt < 2) {
+          const latest = Number(await retry(() => state.provider.send('eth_getTransactionCount', [myAddress(), 'pending'])));
+          nonce = Math.max(nonce + 1, latest);
+          continue;
+        }
+        throw friendly(e);
+      }
+    }
+    throw new Friendly('Please try again', 'The last action was still finishing. Wait a few seconds and try again.');
+  }
+
+  /** Send, wait for confirmation, remember the nonce. TIMEOUT errors carry .hash. */
+  async function sendAndWait(req) {
+    const { hash, nonce } = await sendRaw(req);
+    try {
+      const r = await waitTx(hash);
+      commitNonce(nonce);
+      return r;
+    } catch (e) { e.hash = hash; throw e; }
+  }
+
   /**
    * Send tickets (and optionally running credit) to someone.
    * Resolves with { hash } once confirmed. Throws Friendly errors.
@@ -326,26 +406,20 @@
     if (!state.wallet || !state.token) throw new Friendly('Not ready', 'The app is still starting. Try again in a moment.');
     to = normAddr(to);
     if (sameAddr(to, myAddress())) throw new Friendly('That\'s this phone', 'You scanned this phone\'s own code. Scan the other person\'s code instead.');
-    const useGive = creditWei > 0n || ticketsWei === 0n;
     const gp = await gasPrice();
-    const gasLimit = useGive ? GAS_GIVE : GAS_TRANSFER;
+    let useGive = creditWei > 0n || ticketsWei === 0n;
     const [credit, tickets] = await Promise.all([creditBalance(), ticketsWei > 0n ? ticketBalance() : Promise.resolve(0n)]);
     if (ticketsWei > tickets) throw new Friendly('Not enough tickets', 'This phone only has ' + tix(tickets) + '.', 'NO_TICKETS');
-    if (credit < gasLimit * gp + creditWei) {
-      if (creditWei > 0n && ticketsWei > 0n && credit >= gasLimit * gp) {
-        creditWei = 0n; // can still send tickets, just not pass credit along
+    if (credit < (useGive ? GAS_GIVE : GAS_TRANSFER) * gp + creditWei) {
+      if (creditWei > 0n && ticketsWei > 0n && credit >= GAS_TRANSFER * gp) {
+        creditWei = 0n; useGive = false; // can still send the tickets, just not pass credit along
       } else throw new Friendly('Running credit is empty', creditHelp(), 'NO_CREDIT');
     }
-    const data = useGive && (creditWei > 0n || ticketsWei === 0n)
-      ? iface.encodeFunctionData('give', [to, ticketsWei])
-      : iface.encodeFunctionData('transfer', [to, ticketsWei]);
-    let tx;
-    try {
-      tx = await state.wallet.sendTransaction({
-        to: feteAddress(), data, value: creditWei, gasLimit, gasPrice: gp, type: 0, chainId: state.chainId
-      });
-    } catch (e) { throw friendly(e); }
-    return waitTx(tx.hash);
+    return sendAndWait({
+      to: feteAddress(),
+      data: useGive ? iface.encodeFunctionData('give', [to, ticketsWei]) : iface.encodeFunctionData('transfer', [to, ticketsWei]),
+      value: creditWei, gasLimit: useGive ? GAS_GIVE : GAS_TRANSFER
+    });
   }
 
   /** Wait for a transaction to be confirmed by polling its receipt directly (no block subscriptions). */
@@ -357,36 +431,47 @@
       catch (e) { if (friendly(e).code === 'OFFLINE') setOnline(false); }
       if (rc && rc.blockNumber) {
         if (Number(rc.status) !== 1) throw new Friendly('That didn\'t go through', 'Nothing was sent. Please try again.');
-        return { hash, block: Number(rc.blockNumber) };
+        return { hash, block: Number(rc.blockNumber), contractAddress: rc.contractAddress || null };
       }
       await sleep(900);
     }
-    throw new Friendly('Still processing', 'This is taking longer than normal. Check the balance in a moment before trying again.', 'TIMEOUT');
+    const e = new Friendly('Still going through', 'The network is slow right now. This will most likely complete by itself in a minute — please don\'t repeat it yet. Check the balance shortly.', 'TIMEOUT');
+    e.hash = hash;
+    throw e;
   }
 
   async function createFete(name, wholeTickets, cents) {
-    const gp = await gasPrice();
-    const factory = new ethers.ContractFactory(ABI, BYTECODE, state.wallet);
-    let c;
-    try {
-      c = await factory.deploy(name, BigInt(wholeTickets), BigInt(cents), { gasPrice: gp, type: 0, gasLimit: 2000000n, chainId: state.chainId });
-    } catch (e) { throw friendly(e); }
-    await waitTx(c.deploymentTransaction().hash);
-    const addr = await c.getAddress();
+    const dtx = await new ethers.ContractFactory(ABI, BYTECODE).getDeployTransaction(name, BigInt(wholeTickets), BigInt(cents));
+    const { hash, nonce } = await sendRaw({ data: dtx.data, gasLimit: 2000000n });
+    // Remember where the tickets will be, in case the app is closed or the network is slow.
+    const addr = ethers.getCreateAddress({ from: myAddress(), nonce });
+    store.set(rk('pendingFete'), { address: addr, chainId: state.chainId, at: Date.now() });
+    await waitTx(hash);
+    commitNonce(nonce);
+    store.del(rk('pendingFete'));
     setFete(addr);
     state.token = new ethers.Contract(addr, ABI, state.wallet);
     await loadInfo(true);
     return addr;
   }
 
-  async function sendCreditOnly(to, wei) {
-    // Plain XDC transfer — used by the organiser for running credit.
-    const gp = await gasPrice();
-    let tx;
+  /** If creating tickets was interrupted, pick the fete up again once it exists. */
+  async function recoverPendingFete() {
+    const p = store.get(rk('pendingFete'));
+    if (!p || p.chainId !== state.chainId || feteAddress()) return null;
     try {
-      tx = await state.wallet.sendTransaction({ to: normAddr(to), value: wei, gasLimit: 21000n, gasPrice: gp, type: 0, chainId: state.chainId });
-    } catch (e) { throw friendly(e); }
-    return waitTx(tx.hash);
+      const code = await retry(() => state.provider.send('eth_getCode', [p.address, 'latest']));
+      if (code && code !== '0x') {
+        store.del(rk('pendingFete'));
+        store.del(rk('nonce'));
+        setFete(p.address);
+        state.token = new ethers.Contract(p.address, ABI, state.wallet);
+        await loadInfo(true);
+        return p.address;
+      }
+      if (Date.now() - p.at > 30 * 60000) store.del(rk('pendingFete'));
+    } catch (e) { }
+    return null;
   }
 
   // ------------------------------------------------------------------ payment requests
@@ -399,28 +484,38 @@
 
   /**
    * Watch for an incoming payment of exactly `amount`.
-   * Returns { stop() }. Calls onPaid({ from, hash }) once.
+   * Returns { stop() }. Calls onPaid({ from, hash }) once. If the same code is paid AGAIN
+   * within 3 minutes (two people scanned one QR), calls onExtra({ from, hash }) for each extra.
    */
-  function watchPayment(amount, fromBlock, startBalance, onPaid) {
-    let stopped = false;
+  function watchPayment(amount, fromBlock, startBalance, onPaid, onExtra) {
+    let stopped = false, paidAt = 0;
+    const seen = new Set();
     const me = myAddress();
     const toTopic = ethers.zeroPadValue(me, 32).toLowerCase();
     (async function loop() {
       while (!stopped) {
+        if (paidAt && Date.now() - paidAt > 3 * 60000) return;
         try {
           const logs = await state.provider.send('eth_getLogs', [{
             address: feteAddress(), fromBlock: ethers.toQuantity(Math.max(0, fromBlock - 2)), toBlock: 'latest',
             topics: [TRANSFER_TOPIC, null, toTopic]
           }]);
           setOnline(true);
-          const hit = logs.find((l) => BigInt(l.data) === amount);
-          if (hit && !stopped) { stopped = true; onPaid({ from: normAddr(hit.topics[1]), hash: hit.transactionHash }); return; }
+          for (const hit of logs.filter((l) => BigInt(l.data) === amount)) {
+            if (seen.has(hit.transactionHash) || stopped) continue;
+            seen.add(hit.transactionHash);
+            const info = { from: normAddr(hit.topics[1]), hash: hit.transactionHash };
+            if (!paidAt) { paidAt = Date.now(); onPaid(info); if (!onExtra) { stopped = true; return; } }
+            else onExtra(info);
+          }
+          if (paidAt) { await sleep(3000); continue; }
         } catch (e) {
-          // fallback: balance went up by at least the amount
+          if (paidAt) { await sleep(3000); continue; }
+          // fallback (server refused the log search): the balance went up by exactly this amount
           try {
             const b = await state.token.balanceOf(me);
             setOnline(true);
-            if (b - startBalance >= amount && !stopped) { stopped = true; onPaid({ from: null, hash: null }); return; }
+            if (b - startBalance === amount && !stopped) { stopped = true; paidAt = Date.now(); onPaid({ from: null, hash: null }); return; }
           } catch (e2) { setOnline(false); }
         }
         await sleep(1500);
@@ -438,10 +533,10 @@
           try {
             const b = await state.token.balanceOf(myAddress());
             setOnline(true);
-            if (last === null || b !== last) { const prev = last; last = b; cb(b, prev); }
+            if (last === null || b !== last) { const prev = last; last = b; try { cb(b, prev); } catch (e) { console.warn(e); } }
           } catch (e) { setOnline(false); }
         }
-        await sleep(every);
+        await sleep(typeof every === 'function' ? every() : every);
       }
     })();
     return { stop() { stopped = true; }, set(v) { last = v; } };
@@ -489,12 +584,22 @@
       const ev = iface.parseLog(l);
       const a = normAddr(l.topics[1]);
       const kind = Number(ev.args.kind);
-      if (kind === 0) delete cache.map[a.toLowerCase()];
-      else cache.map[a.toLowerCase()] = Object.assign(cache.map[a.toLowerCase()] || { added: Date.now() }, { address: a, kind: kind === 1 ? 'B' : 'S', name: ev.args.label });
+      const cur = cache.map[a.toLowerCase()];
+      if (kind === 0) { if (cur) cur.removed = true; }
+      else cache.map[a.toLowerCase()] = Object.assign(cur || { added: Date.now() }, { address: a, kind: kind === 1 ? 'B' : 'S', name: ev.args.label, removed: false });
     });
     cache.next = end + 1;
     store.set(key, cache);
     return Object.values(cache.map);
+  }
+  /** Is this address a (current) booth or stall of this fete? null = couldn't check. */
+  async function isTeamMember(addr, timeoutMs = 5000) {
+    const hit = (list) => list.some((m) => !m.removed && sameAddr(m.address, addr));
+    if (hit(cachedHelpers())) return true;
+    try {
+      const list = await Promise.race([helperList(), sleep(timeoutMs).then(() => null)]);
+      return list ? hit(list) : null;
+    } catch (e) { return null; }
   }
   const cachedHelpers = () => Object.values((store.get('helpers.' + feteAddress().toLowerCase(), null) || { map: {} }).map);
 
@@ -506,14 +611,10 @@
     const [credit, tickets] = await Promise.all([creditBalance(), ticketsWei > 0n ? ticketBalance() : Promise.resolve(0n)]);
     if (ticketsWei > tickets) throw new Friendly('Not enough tickets', 'You only have ' + tix(tickets) + '.', 'NO_TICKETS');
     if (credit < gasLimit * gp + creditWei) throw new Friendly('Running credit is low', creditHelp(), 'NO_CREDIT');
-    let tx;
-    try {
-      tx = await state.wallet.sendTransaction({
-        to: feteAddress(), data: iface.encodeFunctionData('addHelper', [to, ticketsWei, kind, String(label || '').slice(0, 40)]),
-        value: creditWei, gasLimit, gasPrice: gp, type: 0, chainId: state.chainId
-      });
-    } catch (e) { throw friendly(e); }
-    return waitTx(tx.hash);
+    return sendAndWait({
+      to: feteAddress(), data: iface.encodeFunctionData('addHelper', [to, ticketsWei, kind, String(label || '').slice(0, 40)]),
+      value: creditWei, gasLimit
+    });
   }
 
   // ------------------------------------------------------------------ QR codes
@@ -534,7 +635,6 @@
       const u = appUrl('customer', true);
       return u + (u.includes('?') ? '&' : '?') + 'pay=' + a + '&amt=' + wei.toString() + '&for=' + encodeURIComponent((label || '').slice(0, 60));
     },
-    fete: (a, chainId) => 'FETE:F:' + a + ':' + (chainId || ''),
     parse(text) {
       text = String(text || '').trim();
       if (isAddr(text)) return { kind: 'C', address: normAddr(text) };
@@ -548,23 +648,12 @@
         }
         return l ? { kind: 'F', address: l.address, chainId: l.chainId } : null;
       }
-      const m = text.match(/FETE:([CBSPF]):((?:0x|xdc)[0-9a-fA-F]{40})(?::(.*))?$/i);
+      // Person / booth / stall codes. (Payment and fete codes are web links, handled above.)
+      const m = text.match(/^FETE:([CBS]):((?:0x|xdc)[0-9a-fA-F]{40})(?::(.*))?$/i);
       if (!m) return null;
-      const kind = m[1].toUpperCase();
-      const address = normAddr(m[2]);
-      const rest = m[3] || '';
-      if (kind === 'P') {
-        const i = rest.indexOf(':');
-        const amt = i < 0 ? rest : rest.slice(0, i);
-        if (!/^\d+$/.test(amt)) return null;
-        let label = '';
-        try { label = decodeURIComponent(i < 0 ? '' : rest.slice(i + 1)); } catch (e) { }
-        return { kind, address, amount: BigInt(amt), label };
-      }
-      if (kind === 'F') return { kind, address, chainId: Number(rest) || null };
       let name = '';
-      try { name = decodeURIComponent(rest); } catch (e) { }
-      return { kind, address, name };
+      try { name = decodeURIComponent(m[3] || ''); } catch (e) { }
+      return { kind: m[1].toUpperCase(), address: normAddr(m[2]), name };
     }
   };
 
@@ -651,9 +740,23 @@
   }
 
   let audioCtx;
+  // iPhones only allow sound after the person has touched the screen, so the stall's "PAID"
+  // chime (which plays on its own) would be silent. Unlock audio on the first tap.
+  function unlockAudio() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const src = audioCtx.createBufferSource();
+      src.buffer = audioCtx.createBuffer(1, 1, 22050);
+      src.connect(audioCtx.destination);
+      src.start(0);
+    } catch (e) { }
+  }
+  ['touchstart', 'pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, unlockAudio, { once: true, passive: true, capture: true }));
   function chime(good = true) {
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const notes = good ? [784, 1047, 1319] : [330, 262];
       notes.forEach((f, i) => {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -983,7 +1086,7 @@
     const link = parseFeteLink($('#restoretext', r.el).value);
     if (link) store.set(rk('restoredFete'), link.address.toLowerCase());
     if (link && !sameAddr(link.address, feteAddress())) {
-      if (link.rpc) store.set('rpc', link.rpc);
+      if (link.rpc && trustedRpc(link.rpc)) store.set('rpc', link.rpc);
       setFete(link.address, link.chainId);
       await sleep(400);
       location.reload();
@@ -1111,8 +1214,7 @@
   // ------------------------------------------------------------------ history (per phone)
   const history_ = {
     list() { return fstore.get('history', []); },
-    add(e) { const l = history_.list(); l.unshift(Object.assign({ t: Date.now() }, e)); fstore.set('history', l.slice(0, 1000)); },
-    clear() { fstore.set('history', []); }
+    add(e) { const l = history_.list(); l.unshift(Object.assign({ t: Date.now() }, e)); fstore.set('history', l.slice(0, 1000)); }
   };
 
   // ------------------------------------------------------------------ misc
@@ -1124,7 +1226,7 @@
   }
 
   function registerSW() {
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
       navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(() => { });
     }
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
@@ -1162,6 +1264,13 @@
     };
     await connectLoop();
     if (b) b.close();
+    const ci = feteAddress() && store.get('info.' + feteAddress().toLowerCase());
+    if (ci && ci.chainId && ci.chainId !== state.chainId) {
+      // The stored fete lives on the other network (e.g. opened a practice link). Start fresh here.
+      setFete('');
+      if (opts.needsFete !== false) await ensureFete();
+      else state.token = null;
+    }
     if (state.chainId === 51 && !$('#practicebar')) {
       const bar = document.createElement('div');
       bar.id = 'practicebar'; bar.className = 'netbar no-print';
@@ -1189,13 +1298,13 @@
   }
 
   window.Fete = {
-    VERSION, CFG, SERVERS, APPS, state, store, Friendly,
-    $, $$, esc, sleep, short, fmt, tix, ticketWord, money, dollars, xdc, toWei, toNum, isAddr, normAddr, sameAddr, timeStr, isToday,
-    rpcUrl, feteAddress, fstore, connect, loadInfo, myAddress, appUrl,
+    VERSION, CFG, SERVERS, state, store,
+    $, $$, esc, sleep, fmt, tix, ticketWord, money, dollars, xdc, toWei, toNum, sameAddr, timeStr, isToday,
+    feteAddress, fstore, loadInfo, myAddress, appUrl,
     ticketBalance, creditBalance, blockNumber, gasPrice, costOfOne,
-    sendTickets, sendCreditOnly, createFete, waitTx, addHelper, helperList, cachedHelpers, setFete, syncUrl, linkQuery, uniqueAmount, watchPayment, watchBalance, allTransfers,
-    qrSvg, Codes, scan, showView, toast, sheet, alertSheet, confirmSheet, showError, busy, splash, chime,
-    backupFlow, backupText, restoreFlow, openSettings, applyFeteCode, history: history_, keepAwake, start, friendly,
+    sendTickets, createFete, recoverPendingFete, waitTx, sendAndWait, iface, isTeamMember, addHelper, helperList, cachedHelpers, setFete, uniqueAmount, watchPayment, watchBalance, allTransfers,
+    qrSvg, Codes, scan, showView, toast, sheet, alertSheet, confirmSheet, showError, busy, splash,
+    backupFlow, backupText, restoreFlow, openSettings, history: history_, keepAwake, start,
     platform, isStandalone, installSheet, copyText, parseUnitsXdc: (v) => ethers.parseEther(String(v)), get ethers() { return ethers; }
   };
 })();

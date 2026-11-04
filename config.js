@@ -1,17 +1,12 @@
 /*
- * Fete Tickets — site-wide settings.
+ * Fete Tickets — site-wide settings for xdcoutpost.xyz/XDC_School_Fete/
  * ------------------------------------------------------------
- * You do NOT need to edit this file to run a fete. Every school sets up its
- * own fete from the Organiser app; the fete travels inside the links and QR
- * codes the app creates (…/customer/?fete=0x…), and inside everyone's backup
- * message. One copy of this website serves any number of schools.
- *
- * These values are just defaults for whoever hosts the site.
+ * Nothing here needs changing to run a fete. Every school sets up its own
+ * fete from the Organiser app; the fete travels inside the links and QR codes
+ * the app creates (…/customer/?fete=0x…) and inside everyone's backup message.
+ * This one website serves any number of schools at the same time.
  */
 window.FETE_CONFIG = {
-  // Optional: pin a single fete for every visitor. Leave "" (recommended) so any school can use the site.
-  feteAddress: "",
-
   // Connection server used by every app. Phones can change it under Settings.
   defaultRpc: "https://rpc.plugin.global/xdcmainnet",
 
